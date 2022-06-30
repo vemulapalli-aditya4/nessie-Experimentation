@@ -100,12 +100,14 @@ public class TestCommitLogEntry {
              */
 
             ByteString getValue = getPuts.get(i).getValue();
-            /** I this the Content ?
+            /** Is this the Content ?
+             * What does
              * ""use org.projectnessie.versioned.StoreWorker#valueFromStore to serialize as an instance of Content
              * D.
              * if valueFromStore calls the Supplier, you can get the global value via
              * org.projectnessie.versioned.persist.adapter.DatabaseAdapter#globalContent
-             * puts - the values serialized via StoreWorker"" ?? */
+             * puts - the values serialized via StoreWorker"" ??
+             * mean */
 
         }
 
