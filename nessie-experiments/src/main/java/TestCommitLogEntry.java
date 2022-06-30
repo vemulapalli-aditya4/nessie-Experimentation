@@ -145,6 +145,7 @@ public class TestCommitLogEntry {
             System.out.println("KeyListEntry content Id is " + key_list.get(i).getContentId().toString());
             System.out.println("KeyListEntry type  is " + key_list.get(i).getType());
             System.out.println("KeyListEntry key  is " + key_list.get(i).getKey());
+            /** Handling Null Pointer Exception */
             System.out.println("KeyListEntry commit ID  is " + Objects.requireNonNull(key_list.get(i).getCommitId()).asString());
         }
 
