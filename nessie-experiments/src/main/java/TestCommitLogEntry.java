@@ -151,18 +151,19 @@ public class TestCommitLogEntry {
             System.out.println("KeyListEntry commit ID  is " + Objects.requireNonNull(key_list.get(i).getCommitId()).asString());
         }
 
+        /**I think this is the overflow to store keys if not fitting in the KeyList keyList*/
         List<Hash> keyListsIds = commitLogEntry.getKeyListsIds();
+        /** fetchKeyLists is used to get the KeyList Entity by using KeyListIds we got using above func
+        Stream<KeyListEntity> fetchKeyLists = mongoDatabaseAdapter.fetchKeyLists(ctx, keyListsIds);
+        public interface KeyListEntity {
+            Hash getId();
 
-//        Stream<KeyListEntity> fetchKeyLists;
-//        fetchKeyLists = mongoDatabaseAdapter.fetchKeyLists();
-//        public interface KeyListEntity {
-//            Hash getId();
-//
-//            KeyList getKeys();
-//        public interface KeyList {
-//            List<KeyListEntry> getKeys();
+            KeyList getKeys();
 
-            // refs.map(r -> r.getNamedRef().getName()).forEach(System.out::println);
+        public interface KeyList {
+            List<KeyListEntry> getKeys(); */
+
+        // refs.map(r -> r.getNamedRef().getName()).forEach(System.out::println);
     }
 
 
