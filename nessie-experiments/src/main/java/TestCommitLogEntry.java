@@ -14,7 +14,9 @@ import org.projectnessie.versioned.persist.mongodb.MongoDatabaseAdapterFactory;
 import org.projectnessie.versioned.persist.mongodb.MongoDatabaseClient;
 import org.projectnessie.versioned.persist.nontx.ImmutableAdjustableNonTransactionalDatabaseAdapterConfig;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class TestCommitLogEntry {
@@ -84,6 +86,7 @@ public class TestCommitLogEntry {
             ContentId contentId = getPuts.get(i).getContentId();
             System.out.println("Puts Content id is " + contentId.toString());
 
+            /** Table Name */
             Key key = getPuts.get(i).getKey();
             System.out.println("Puts Key is " + key.toString());
 
@@ -97,7 +100,12 @@ public class TestCommitLogEntry {
              */
 
             ByteString getValue = getPuts.get(i).getValue();
-            /** Should experiment with getValue. */
+            /** I this the Content ?
+             * ""use org.projectnessie.versioned.StoreWorker#valueFromStore to serialize as an instance of Content
+             * D.
+             * if valueFromStore calls the Supplier, you can get the global value via
+             * org.projectnessie.versioned.persist.adapter.DatabaseAdapter#globalContent
+             * puts - the values serialized via StoreWorker"" ?? */
 
         }
 
@@ -116,11 +124,28 @@ public class TestCommitLogEntry {
         }
 
         KeyList keyList = commitLogEntry.getKeyList();
+        /**public interface KeyList {
+            List<KeyListEntry> getKeys();*/
+        /** public interface KeyListEntry {
+            Key getKey();
+
+            ContentId getContentId();
+
+            byte getType();
+
+            @Nullable
+            Hash getCommitId();*/
+
         /** Doubt */
-        List<KeyListEntry> keys = keyList.getKeys();
-        for(int i = 0 ; i < keys.size(); i++)
+        /** Handling Null Pointer Exception */
+        List<KeyListEntry> key_list = (keyList != null ? keyList.getKeys() : null);
+        for(int i = 0 ; i < key_list.size(); i++)
         {
-            System.out.println(keys.get(i).getContentId().toString());
+            System.out.println("i = " + i);
+            System.out.println("KeyListEntry content Id is " + key_list.get(i).getContentId().toString());
+            System.out.println("KeyListEntry type  is " + key_list.get(i).getType());
+            System.out.println("KeyListEntry key  is " + key_list.get(i).getKey());
+            System.out.println("KeyListEntry commit ID  is " + Objects.requireNonNull(key_list.get(i).getCommitId()).asString());
         }
 
         List<Hash> keyListsIds = commitLogEntry.getKeyListsIds();
