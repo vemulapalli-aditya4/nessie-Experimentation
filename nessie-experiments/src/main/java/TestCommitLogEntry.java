@@ -141,14 +141,17 @@ public class TestCommitLogEntry {
         /** Doubt */
         /** Handling Null Pointer Exception */
         List<KeyListEntry> key_list = (keyList != null ? keyList.getKeys() : null);
-        for(int i = 0 ; i < key_list.size(); i++)
+        if( key_list != null)
         {
-            System.out.println("i = " + i);
-            System.out.println("KeyListEntry content Id is " + key_list.get(i).getContentId().toString());
-            System.out.println("KeyListEntry type  is " + key_list.get(i).getType());
-            System.out.println("KeyListEntry key  is " + key_list.get(i).getKey());
-            /** Handling Null Pointer Exception */
-            System.out.println("KeyListEntry commit ID  is " + Objects.requireNonNull(key_list.get(i).getCommitId()).asString());
+            for(int i = 0 ; i < key_list.size(); i++)
+            {
+                System.out.println("i = " + i);
+                System.out.println("KeyListEntry content Id is " + key_list.get(i).getContentId().toString());
+                System.out.println("KeyListEntry type  is " + key_list.get(i).getType());
+                System.out.println("KeyListEntry key  is " + key_list.get(i).getKey());
+                /** Handling Null Pointer Exception */
+                System.out.println("KeyListEntry commit ID  is " + Objects.requireNonNull(key_list.get(i).getCommitId()).asString());
+            }
         }
 
         /**I think this is the overflow to store keys if not fitting in the KeyList keyList*/
