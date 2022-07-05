@@ -52,7 +52,7 @@
 //    }
 //
 //    @Test
-//    public void TablesInMongoRepo() throws ReferenceNotFoundException {
+//    public void TablesInMongoRepo() throws ReferenceNotFoundException, RefLogNotFoundException {
 //
 //        MongoClientConfig mongoClientConfig = ImmutableMongoClientConfig.builder()
 //                .connectionString("mongodb://root:password@localhost:27017").databaseName("nessie").build();
@@ -90,14 +90,15 @@
 //        Hash initialHash;
 //        // Stream <RefLog> allRefLogEntries = mongoDatabaseAdapter.refLog(initialHash);
 //
+//        Stream<RefLog> allReflogEntries = mongoDatabaseAdapter.refLog(null);
 //
 //        // Repo Desc Table
-//        RepoDescription repoDesc = mongoDatabaseAdapter.fetchRepositoryDescription();
+//        // RepoDescription repoDesc = mongoDatabaseAdapter.fetchRepositoryDescription();
 //
-//        System.out.println(" " + repoDesc.getRepoVersion());
+//        // System.out.println(" " + repoDesc.getRepoVersion());
 //
 //        //Key Lists Table
-//        List<Hash> keyListsIds;
+//        // List<Hash> keyListsIds;
 //
 //        // Stream<KeyListEntity> keysListsTable = mongoDatabaseAdapter.fetchKeyLists(ctx,keyListsIds );
 //
@@ -117,10 +118,9 @@
 //
 //        //ref heads table
 //
-//        Stream<ReferenceInfo<ByteString>> refs = mongoDatabaseAdapter.namedRefs(GetNamedRefsParams.DEFAULT);
+//        // Stream<ReferenceInfo<ByteString>> refs = mongoDatabaseAdapter.namedRefs(GetNamedRefsParams.DEFAULT);
 //
 //        // protected Spliterator<RefLog> readRefLog(NonTransactionalOperationContext ctx, Hash initialHash)
-//
 //
 //
 //

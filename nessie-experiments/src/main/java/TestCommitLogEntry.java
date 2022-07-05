@@ -1,28 +1,37 @@
+import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
 import org.junit.Test;
 import org.projectnessie.model.CommitMeta;
 import org.projectnessie.model.Content;
 import org.projectnessie.server.store.TableCommitMetaStoreWorker;
-import org.projectnessie.versioned.Hash;
-import org.projectnessie.versioned.Key;
-import org.projectnessie.versioned.ReferenceNotFoundException;
-import org.projectnessie.versioned.StoreWorker;
+import org.projectnessie.versioned.*;
 import org.projectnessie.versioned.persist.adapter.*;
 import org.projectnessie.versioned.persist.mongodb.ImmutableMongoClientConfig;
 import org.projectnessie.versioned.persist.mongodb.MongoClientConfig;
 import org.projectnessie.versioned.persist.mongodb.MongoDatabaseAdapterFactory;
 import org.projectnessie.versioned.persist.mongodb.MongoDatabaseClient;
 import org.projectnessie.versioned.persist.nontx.ImmutableAdjustableNonTransactionalDatabaseAdapterConfig;
+import org.projectnessie.versioned.persist.serialize.AdapterTypes;
 
 import javax.annotation.Nullable;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.projectnessie.versioned.persist.adapter.serialize.ProtoSerialization.protoToRefLog;
+import static org.projectnessie.versioned.persist.adapter.serialize.ProtoSerialization.toProto;
 
 public class TestCommitLogEntry {
 
     @Test
-    public void TestCommitLogEntries() throws ReferenceNotFoundException {
+    public void TestCommitLogEntries() throws ReferenceNotFoundException, RefLogNotFoundException {
         MongoClientConfig mongoClientConfig = ImmutableMongoClientConfig.builder()
                 .connectionString("mongodb://root:password@localhost:27017").databaseName("nessie").build();
 
@@ -44,7 +53,152 @@ public class TestCommitLogEntry {
                 .build(storeWorker);
         System.out.println("DatabaseAdapter Initialized");
 
+        Stream<RefLog> allReflogEntries = mongoDatabaseAdapter.refLog(null);
+         // System.out.println("Count of ref log when null is passed " + allReflogEntries.count());
 
+         // RefLog refLog = allReflogEntries.findFirst().orElse(null);
+
+         // System.out.println("Ref Log Entry commit Hash is " + refLog.getCommitHash().asString() );
+
+        /** Will the list be in the same order of stream ( is Stream an actual order of RefLogTable )  */
+        List<RefLog> refLogList = allReflogEntries.collect(Collectors.toList());
+
+        String refLogTableFilePath = "/Users/aditya.vemulapalli/Downloads/refLogTableProto";
+        List<AdapterTypes.RefLogEntry> refLogEntries = new ArrayList<AdapterTypes.RefLogEntry>();
+
+        boolean bl1 = false;
+        Hash h1 = null;
+        /** serialize the RefLog */
+        for (RefLog refLog : refLogList) {
+            AdapterTypes.RefLogEntry refLogEntry = toProtoFromRefLog(refLog);
+            refLogEntries.add(refLogEntry);
+            if(!bl1)
+            {
+                bl1 = true;
+                h1 = refLog.getCommitHash();
+            }
+        }
+
+        FileOutputStream fosRefLog = null;
+        FileInputStream fosRefLogInputStream = null;
+        try{
+            // fosRefLog = new FileOutputStream(refLogTableFilePath);
+            // fosRefLogInputStream = new FileInputStream(refLogTableFilePath);
+            int tLen = refLogEntries.size() * 4 ;
+            boolean bl = false;
+            byte[] bytes0Len;
+            RefLog rfLog = null;
+
+            for (AdapterTypes.RefLogEntry refLogEntry : refLogEntries) {
+                byte[] refLogEntryByteArray = refLogEntry.toByteArray();
+                int len = refLogEntryByteArray.length;
+                tLen += len;
+                ByteBuffer bb = ByteBuffer.allocate(4);
+                bb.putInt(len);
+                byte[] bytes = bb.array();
+                if(!bl)
+                {
+                   bl = true;
+                   bytes0Len = bytes;
+                   System.out.println("Ref log 0 commit hash without ser is " + h1 );
+                   rfLog = protoToRefLog(refLogEntryByteArray);
+                   System.out.println("ref Log 0 commit Hash is " + rfLog.getCommitHash().toString());
+
+                }
+//                fosRefLog.write(bytes);
+//                fosRefLog.write(refLogEntryByteArray);
+            }
+            Path path = Paths.get("/Users/aditya.vemulapalli/Downloads/refLogTableProto");
+            byte[] data = Files.readAllBytes(path);
+            System.out.println("length of total ref log table file is " + data.length);
+            System.out.println("Lenght of total ref log table file using tlen is " + tLen);
+
+
+        } catch( FileNotFoundException e ) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if(fosRefLog != null)
+            {
+                try{
+                    fosRefLog.close();
+                    fosRefLogInputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+
+        System.out.println("Ref Log Table file is written");
+
+        /**************************************************************************************************/
+
+        RepoDescription repoDescTable = mongoDatabaseAdapter.fetchRepositoryDescription();
+        System.out.println("Repo Version using RepoDescription  is " + repoDescTable.getRepoVersion());
+
+        AdapterTypes.RepoProps repoProps = toProto(repoDescTable);
+
+        /***/
+        System.out.println("RepoProps proto is " + repoProps.toString());
+        System.out.println("RepoProps proto length is " + repoProps.toString().length());
+
+        System.out.println("Repo Version using RepoProps is " + repoProps.getRepoVersion());
+
+        String repoDescFilePath = "/Users/aditya.vemulapalli/Downloads/repoDescProto";
+
+        FileOutputStream fosDescTable = null;
+        try{
+            fosDescTable = new FileOutputStream(repoDescFilePath);
+            repoProps.writeTo(fosDescTable);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if(fosDescTable != null)
+            {
+                try {
+                    fosDescTable.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println("Repository Description file is written");
+
+        /**************************************************************************************************/
+
+//        GetNamedRefsParams params = GetNamedRefsParams.DEFAULT;
+//
+//        Stream<ReferenceInfo<ByteString>> namedReferences = mongoDatabaseAdapter.namedRefs(params);
+//        List<ReferenceInfo<ByteString>> namedReferencesList = namedReferences.collect(Collectors.toList());
+//
+//        String namedRefsTableFilePath = "/Users/aditya.vemulapalli/Downloads/namedRefs.json";
+//        Writer writer = null;
+//        Gson gson = new Gson();
+//
+//        /**Using GSON for serialization and de - serialization*/
+//        /** Serialization is straight forward , deserialization must be done using custom deserializer */
+//
+//        /**Gson gson = new GsonBuilder().create(); --->for non readable format */
+//
+//        try{
+//            writer = new FileWriter(namedRefsTableFilePath);
+//            gson.toJson(namedReferencesList, writer);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            if(writer != null)
+//            {
+//                try {
+//                    writer.close();
+//                }
+//                catch(IOException e){
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
+//        System.out.println("Named Refs is written");
         Stream<CommitLogEntry> commitLogTable = mongoDatabaseAdapter.scanAllCommitLogEntries();
 
         // long count = commitLogTable.count();
@@ -169,5 +323,51 @@ public class TestCommitLogEntry {
         // refs.map(r -> r.getNamedRef().getName()).forEach(System.out::println);
     }
 
+    public AdapterTypes.RefLogEntry toProtoFromRefLog(RefLog refLog)
+    {
+        /** Reference type can be 'Branch' or 'Tag'. */
+        AdapterTypes.RefType refType = Objects.equals(refLog.getRefType(), "Tag") ? AdapterTypes.RefType.Tag : AdapterTypes.RefType.Branch;
+        /**enum Operation { __>RefLogEntry persist.proto
+         CREATE_REFERENCE = 0;
+         COMMIT = 1;
+         DELETE_REFERENCE = 2;
+         ASSIGN_REFERENCE = 3;
+         MERGE = 4;
+         TRANSPLANT = 5;
+         }*/
 
+        String op = refLog.getOperation();
+        AdapterTypes.RefLogEntry.Operation operation = AdapterTypes.RefLogEntry.Operation.TRANSPLANT;
+
+        /** Confirm whether the string ops are correct or not */
+        if(Objects.equals(op, "CREATE_REFERENCE"))
+        {
+            operation = AdapterTypes.RefLogEntry.Operation.CREATE_REFERENCE;
+        } else if (Objects.equals(op, "COMMIT")) {
+            operation = AdapterTypes.RefLogEntry.Operation.COMMIT;
+        } else if ( Objects.equals(op, "DELETE_REFERENCE") ) {
+            operation = AdapterTypes.RefLogEntry.Operation.COMMIT;
+        } else if (Objects.equals(op, "ASSIGN_REFERENCE") ) {
+            operation = AdapterTypes.RefLogEntry.Operation.ASSIGN_REFERENCE;
+        } else if (Objects.equals(op, "MERGE")) {
+            operation = AdapterTypes.RefLogEntry.Operation.MERGE;
+        }
+
+        AdapterTypes.RefLogEntry.Builder proto =
+                AdapterTypes.RefLogEntry.newBuilder()
+                        .setRefLogId(refLog.getRefLogId().asBytes())
+                        .setRefName(ByteString.copyFromUtf8(refLog.getRefName()))
+                        .setRefType(refType)
+                        .setCommitHash(refLog.getCommitHash().asBytes())
+                        .setOperationTime(refLog.getOperationTime())
+                        .setOperation(operation);
+
+        List<Hash> sourceHashes = refLog.getSourceHashes();
+        sourceHashes.forEach(hash -> proto.addSourceHashes(hash.asBytes()));
+
+        Stream<ByteString> parents = refLog.getParents().stream().map(Hash::asBytes);
+        parents.forEach(proto::addParents);
+
+        return proto.build();
+    }
 }
