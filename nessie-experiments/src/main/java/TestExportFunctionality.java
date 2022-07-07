@@ -97,6 +97,7 @@ public class TestExportFunctionality {
 
             fosRefLog.close();
 
+            finalFosRefLog.close();
             refLogTable.close();
 
         } catch(IOException e ) {
@@ -289,8 +290,9 @@ public class TestExportFunctionality {
                 .build(storeWorker);
         System.out.println("DatabaseAdapter Initialized");
 
-        String commitLogTableFilePath = "/Users/aditya.vemulapalli/Downloads/commitLogFile";
-        String commitLogTableFilePath2 = "/Users/aditya.vemulapalli/Downloads/commitLogContents";
+        String commitLogTableFilePath1 = "/Users/aditya.vemulapalli/Downloads/commitLogFile1";
+        String commitLogTableFilePath2 = "/Users/aditya.vemulapalli/Downloads/commitLogFile2";
+        String commitLogTableFilePath3 = "/Users/aditya.vemulapalli/Downloads/commitLogFile3";
 
         Stream<CommitLogEntry> commitLogTable =  mongoDatabaseAdapter.scanAllCommitLogEntries();
 
@@ -308,30 +310,25 @@ public class TestExportFunctionality {
 
         Serializer<CommitMeta> metaSerializer = storeWorker.getMetadataSerializer();
 
-        List<CommitLogClass1> commitLogList = new ArrayList<CommitLogClass1>();
-        List<CommitLogClass2> contentsLists = new ArrayList<CommitLogClass2>();
+        List<CommitLogClass1> commitLogList1 = new ArrayList<CommitLogClass1>();
+        List<CommitLogClass2> commitLogList2 = new ArrayList<CommitLogClass2>();
+        List<CommitLogClass3> commitLogList3 = new ArrayList<CommitLogClass3>();
 
-//        Writer writer = null;
-//        Gson gson = new Gson();
-
-        FileOutputStream fileOut = null;
-        ObjectOutputStream out = null;
-        FileOutputStream fosCommitLogContents = null;
-
+        FileOutputStream fileOut1 = null;
+        ObjectOutputStream out1 = null;
+        FileOutputStream fileOut2 = null;
+        FileOutputStream fileOut3 = null;
         try{
-            fileOut = new FileOutputStream(commitLogTableFilePath);
-            out = new ObjectOutputStream(fileOut);
-            fosCommitLogContents = new FileOutputStream(commitLogTableFilePath2);
+            fileOut1 = new FileOutputStream(commitLogTableFilePath1);
+            out1 = new ObjectOutputStream(fileOut1);
+            fileOut2 = new FileOutputStream(commitLogTableFilePath2);
+            fileOut3 = new FileOutputStream(commitLogTableFilePath3);
 
-            final int[] ct = {0};
-//            writer = new FileWriter(commitLogTableFilePath);
             commitLogTable.map(x -> {
                 long createdTime = x.getCreatedTime();
-                ct[0] = ct[0] + 1;
                 long commitSeq = x.getCommitSeq();
                 String hash = x.getHash().asString();
 
-                //ask 1st parent is first or last
                 String parent_1st = x.getParents().get(0).asString();
 
                 List<String> additionalParents = new ArrayList<String>();
@@ -360,13 +357,7 @@ public class TestExportFunctionality {
 
                 CommitMeta metaData = metaSerializer.fromBytes(metaDataByteString);
 
-//                System.out.println("hash is " + metaData.getHash());
-//                System.out.println("signed off by " + metaData.getSignedOffBy());
-                CommitMetaInfo commitMetaInfo = new CommitMetaInfo(metaData.getAuthor(), metaData.getCommitTime(), metaData.getAuthorTime(),
-                        metaData.getHash(), metaData.getCommitter(), metaData.getMessage(), metaData.getProperties(), metaData.getSignedOffBy());
-
-                // List<ContentId> contentIds = new ArrayList<ContentId>();
-                // List<Key> putsKeys = new ArrayList<>();
+                commitLogList3.add(new CommitLogClass3(metaData));
 
                 List <String> contentIds = new ArrayList<>();
                 List<Content> contents = new ArrayList<>();
@@ -381,88 +372,29 @@ public class TestExportFunctionality {
 
                     Content content = storeWorker.valueFromStore(value, () -> getGlobalContents.apply(put));
 
-//                    ObjectMapper objectMapper = new ObjectMapper();
-//
-//                    byte[] arr ;
-//
-//                    try{
-//                        arr = objectMapper.writeValueAsBytes(content);
-//                    } catch (JsonProcessingException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//
-//                    Content content1;
-//
-//                    try{
-//                        content1 = objectMapper.readValue(arr, Content.class);
-//                    } catch (IOException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//
-//                    System.out.println(content.getId());
-//                    System.out.println(content1.getId());
-
-//                    if(content instanceof ImmutableIcebergTable)
-//                    {
-                        // System.out.println("Iceberg Table");
-
-//                        IcebergTable icebergTable = (ImmutableIcebergTable) content;
-//
-//                        ObjectMapper objectMapper = new ObjectMapper();
-//                        byte[] arr ;
-//
-//                        try {
-//                            arr = objectMapper.writeValueAsBytes(icebergTable);
-//                        } catch (JsonProcessingException e) {
-//                            throw new RuntimeException(e);
-//                        }
-//
-//                        IcebergTable icebergTable1;
-//                        try {
-//                            icebergTable1 = objectMapper.readValue(arr, IcebergTable.class );
-//                        } catch (IOException e) {
-//                            throw new RuntimeException(e);
-//                        }
-//
-//                        System.out.println("IcebergTable1 id is " + icebergTable1.getId());
-//                        System.out.println(icebergTable1.getMetadata());
-//                        System.out.println("IcebergTable id is " + icebergTable.getId());
-//                        System.out.println(icebergTable.getMetadata());
-
-//                    }
-//                    if(content instanceof ImmutableIcebergView)
-//                    {
-//                        ImmutableIcebergView immutableIcebergView = (ImmutableIcebergView) content;
-//
-//                    }
-//                    if(content instanceof ImmutableDeltaLakeTable)
-//                    {
-//                        ImmutableDeltaLakeTable immutableDeltaLakeTable = (ImmutableDeltaLakeTable) content;
-//
-//                    }
                     contents.add(content);
 
                     Key key = put.getKey();
-                    // putsKeys.add(key);
                     List<String> elements1 = key.getElements();
                     putsKeyNoOfStrings.add(elements1.size());
                     putsKeyStrings.addAll(elements1);
                 }
 
-                contentsLists.add(new CommitLogClass2(contents));
+                commitLogList2.add(new CommitLogClass2(contents));
+
                 /** Must Change This */
                 return new CommitLogClass1(createdTime, commitSeq, hash, parent_1st, additionalParents, deletes, noOfStringsInKeys,
-                        commitMetaInfo, contentIds, putsKeyStrings, putsKeyNoOfStrings);
-            }).forEach(commitLogList::add);
+                        contentIds, putsKeyStrings, putsKeyNoOfStrings);
+            }).forEach(commitLogList1::add);
 
-            for (CommitLogClass2 contentsList : contentsLists) {
+            for (CommitLogClass2 commitLogClass2 : commitLogList2) {
                 //First store the number of contents in each commit log entry
-                ByteBuffer bb = ByteBuffer.allocate(4);
-                int noOfContents = contentsList.contents.size();
-                bb.putInt(noOfContents);
-                byte[] bytes = bb.array();
+                ByteBuffer bb1 = ByteBuffer.allocate(4);
+                int noOfContents = commitLogClass2.contents.size();
+                bb1.putInt(noOfContents);
+                byte[] bytes1 = bb1.array();
                 try {
-                    fosCommitLogContents.write(bytes);
+                    fileOut2.write(bytes1);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -470,16 +402,16 @@ public class TestExportFunctionality {
                     ObjectMapper objectMapper = new ObjectMapper();
                     byte[] arr;
                     try {
-                        arr = objectMapper.writeValueAsBytes(contentsList.contents.get(j));
+                        arr = objectMapper.writeValueAsBytes(commitLogClass2.contents.get(j));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
-                    ByteBuffer bb1 = ByteBuffer.allocate(4);
-                    bb1.putInt(arr.length);
-                    byte[] bytes2 = bb1.array();
+                    ByteBuffer bb2 = ByteBuffer.allocate(4);
+                    bb2.putInt(arr.length);
+                    byte[] bytes2 = bb2.array();
                     try {
-                        fosCommitLogContents.write(bytes2);
-                        fosCommitLogContents.write(arr);
+                        fileOut2.write(bytes2);
+                        fileOut2.write(arr);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -487,88 +419,69 @@ public class TestExportFunctionality {
                 }
 
             }
-            System.out.println("ct is " + ct[0]);
-             out.writeObject(commitLogList);
-             out.close();
-             fileOut.close();
-             fosCommitLogContents.close();
 
-//            gson.toJson(commitLogList, writer);
+            for(CommitLogClass3 commitLogClass3 : commitLogList3)
+            {
+                ObjectMapper objectMapper = new ObjectMapper();
+                byte[] array;
+
+                try{
+                    array = objectMapper.writeValueAsBytes(commitLogClass3.metaData);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+
+                ByteBuffer bb = ByteBuffer.allocate(4);
+                bb.putInt(array.length);
+                byte[] lenOfCommitMeta = bb.array();
+
+                try{
+                    fileOut3.write(lenOfCommitMeta);
+                    fileOut3.write(array);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            out1.writeObject(commitLogList1);
+            out1.close();
+            fileOut1.close();
+            fileOut2.close();
+            fileOut3.close();
+            commitLogTable.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        /** Deserialization Logic */
-
-        FileInputStream fileIn = null;
-         ObjectInputStream in = null;
-         List<CommitLogClass1> commitLogClass1List = new ArrayList<CommitLogClass1>();
-         try{
-         fileIn = new FileInputStream(commitLogTableFilePath);
-         in = new ObjectInputStream(fileIn);
-
-         commitLogClass1List = (ArrayList) in.readObject();
-         in.close();
-         fileIn.close();
-
-             for (CommitLogClass1 commitLogClass1 : commitLogClass1List) {
-                 System.out.println(commitLogClass1.commitMetaInfo.author);
-                 System.out.println(commitLogClass1.commitMetaInfo.committer);
-                 System.out.println(commitLogClass1.commitMetaInfo.authorTime);
-                 System.out.println(commitLogClass1.commitMetaInfo.commitTime);
-                 System.out.println(commitLogClass1.commitMetaInfo.hash);
-                 System.out.println(commitLogClass1.commitMetaInfo.message);
-                 System.out.println(commitLogClass1.commitMetaInfo.signedOffBy);
-                 System.out.println(commitLogClass1.commitMetaInfo.properties);
-             }
-
-             for(CommitLogClass1 commitLogClass1 : commitLogClass1List)
-             {
-                 System.out.println(commitLogClass1.commitSeq);
-                 System.out.println(commitLogClass1.createdTime);
-                 System.out.println(commitLogClass1.parent_1st);
-                 System.out.println(commitLogClass1.hash);
-                 System.out.println(commitLogClass1.additionalParents);
-                 System.out.println(commitLogClass1.contentIds);
-                 System.out.println(commitLogClass1.deletes);
-                 System.out.println(commitLogClass1.noOfStringsInKeys);
-                 System.out.println(commitLogClass1.putsKeyStrings);
-                 System.out.println(commitLogClass1.putsKeyNoOfStrings);
-             }
-
-         } catch (IOException | ClassNotFoundException e) {
-         throw new RuntimeException(e);
-         }
-
-//        Gson gson2 = new Gson();
-//        Type listOfMyClassObject = new TypeToken<ArrayList<CommitLogClass1>>() {}.getType();
-//        try {
-//            List<CommitLogClass1> outputList = gson.fromJson(new FileReader(commitLogTableFilePath), listOfMyClassObject);
-//        } catch (FileNotFoundException e) {
-//            throw new RuntimeException(e);
-//        }
-
-//        Reader reader = null;
-//        Gson gson2 = new Gson();
-//
-//        try{
-//            reader = new FileReader(commitLogTableFilePath);
-//            JsonStreamParser parser = new JsonStreamParser(reader);
-//            Type MyClassObject = new TypeToken<CommitLogClass1>() {}.getType();
-//            while(parser.hasNext())
-//            {
-//                JsonElement e = parser.next();
-//                if(e.isJsonObject())
-//                {
-//                    CommitLogClass1 c1 = gson.fromJson(e, MyClassObject);
-//                }
-//            }
-//
-//            reader.close();
-//
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+        /** Deserialization Logic for CommitLogFile1*/
+        /**
+         * FileInputStream fileIn = null;
+         *         ObjectInputStream in = null;
+         *         List<CommitLogClass1> commitLogClass1List = new ArrayList<CommitLogClass1>();
+         *         try{
+         *          fileIn = new FileInputStream(commitLogTableFilePath1);
+         *          in = new ObjectInputStream(fileIn);
+         *          commitLogClass1List = (ArrayList) in.readObject();
+         *          in.close();
+         *          fileIn.close();
+         *
+         *          for(CommitLogClass1 commitLogClass1 : commitLogClass1List)
+         *          {
+         *              System.out.println(commitLogClass1.commitSeq);
+         *              System.out.println(commitLogClass1.createdTime);
+         *              System.out.println(commitLogClass1.parent_1st);
+         *              System.out.println(commitLogClass1.hash);
+         *              System.out.println(commitLogClass1.additionalParents);
+         *              System.out.println(commitLogClass1.contentIds);
+         *              System.out.println(commitLogClass1.deletes);
+         *              System.out.println(commitLogClass1.noOfStringsInKeys);
+         *              System.out.println(commitLogClass1.putsKeyStrings);
+         *              System.out.println(commitLogClass1.putsKeyNoOfStrings);
+         *          }
+         *
+         *          } catch (IOException | ClassNotFoundException e) {
+         *          throw new RuntimeException(e);
+         *          }*/
 
     }
         public AdapterTypes.RefLogEntry toProtoFromRefLog(RefLog refLog)
