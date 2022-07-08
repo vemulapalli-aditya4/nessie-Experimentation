@@ -424,6 +424,8 @@ public class TestExportMongo {
                 noOfBytes -= size;
                 ObjectMapper objectMapper = new ObjectMapper();
                 CommitLogClass2 commitLogClass2 = objectMapper.readValue(obj, CommitLogClass2.class);
+
+                System.out.println(commitLogClass2.commitMeta);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

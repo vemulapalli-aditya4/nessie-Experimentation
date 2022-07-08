@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.projectnessie.versioned.persist.adapter.serialize.ProtoSerialization.protoToRefLog;
+import static org.projectnessie.versioned.persist.adapter.serialize.ProtoSerialization.toProto;
 
 public class TestExportMongoDeserialization {
 
@@ -153,6 +154,156 @@ public class TestExportMongoDeserialization {
     }
 
     @Test
+    public void TestNamedRefs() throws RefLogNotFoundException {
+        MongoClientConfig mongoClientConfig = ImmutableMongoClientConfig.builder()
+                .connectionString("mongodb://root:password@localhost:27017").databaseName("nessie").build();
+
+        MongoDatabaseClient MongoDBClient = new MongoDatabaseClient();
+        MongoDBClient.configure(mongoClientConfig);
+        MongoDBClient.initialize();
+        System.out.println("Mongo DB Client Initialized");
+
+        System.out.println("Count of reflog is " + MongoDBClient.getRefLog().countDocuments());
+        System.out.println("Count of commitlog is  " + MongoDBClient.getCommitLog().countDocuments());
+
+        long count = MongoDBClient.getCommitLog().countDocuments();
+        StoreWorker<Content, CommitMeta, Content.Type> storeWorker = new TableCommitMetaStoreWorker();
+
+        DatabaseAdapter mongoDatabaseAdapter = new MongoDatabaseAdapterFactory()
+                .newBuilder()
+                .withConnector(MongoDBClient)
+                .withConfig(ImmutableAdjustableNonTransactionalDatabaseAdapterConfig.builder().build())
+                .build(storeWorker);
+        System.out.println("DatabaseAdapter Initialized");
+
+        GetNamedRefsParams params = GetNamedRefsParams.DEFAULT;
+
+        String namedRefsFilePath = "/Users/aditya.vemulapalli/Downloads/namedRefs";
+
+        List<ReferenceInfoExport> namedRefsInfoList;
+        namedRefsInfoList = new ArrayList<ReferenceInfoExport>();
+        Stream<ReferenceInfo<ByteString>> namedReferences = null;
+        FileOutputStream fileOut = null;
+        ObjectOutputStream out = null;
+
+        try {
+            namedReferences = mongoDatabaseAdapter.namedRefs(params);
+        } catch (ReferenceNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            fileOut = new FileOutputStream(namedRefsFilePath);
+            out = new ObjectOutputStream(fileOut);
+
+            namedReferences.map(x -> {
+                String referenceName = x.getNamedRef().getName();
+
+                String type  = " "; /** must get this */
+                if(x.getNamedRef() instanceof ImmutableBranchName)
+                {
+                    type = "branch";
+                } else if (x.getNamedRef() instanceof ImmutableTagName) {
+                    type = "tag";
+                }
+
+                String hash = x.getHash().asString();
+
+                return  new ReferenceInfoExport(referenceName, type, hash);
+            }).forEach(namedRefsInfoList::add);
+
+
+            out.writeObject(namedRefsInfoList);
+            out.close();
+            fileOut.close();
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        FileInputStream fileIn = null;
+        ObjectInputStream in = null;
+        List<ReferenceInfoExport> readNamedRefsInfoList = new ArrayList<ReferenceInfoExport>();
+        try{
+            fileIn = new FileInputStream(namedRefsFilePath);
+            in = new ObjectInputStream(fileIn);
+
+            readNamedRefsInfoList = (ArrayList) in.readObject();
+            in.close();
+            fileIn.close();
+
+            for (ReferenceInfoExport referenceInfoExport : readNamedRefsInfoList) {
+                System.out.println("" + referenceInfoExport.referenceName);
+                System.out.println("" + referenceInfoExport.type);
+                System.out.println("" + referenceInfoExport.hash);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void TestRepoDesc()
+    {
+        MongoClientConfig mongoClientConfig = ImmutableMongoClientConfig.builder()
+                .connectionString("mongodb://root:password@localhost:27017").databaseName("nessie").build();
+
+        MongoDatabaseClient MongoDBClient = new MongoDatabaseClient();
+        MongoDBClient.configure(mongoClientConfig);
+        MongoDBClient.initialize();
+        System.out.println("Mongo DB Client Initialized");
+
+        System.out.println("Count of reflog is " + MongoDBClient.getRefLog().countDocuments());
+        System.out.println("Count of commitlog is  " + MongoDBClient.getCommitLog().countDocuments());
+
+        long count = MongoDBClient.getCommitLog().countDocuments();
+        StoreWorker<Content, CommitMeta, Content.Type> storeWorker = new TableCommitMetaStoreWorker();
+
+        DatabaseAdapter mongoDatabaseAdapter = new MongoDatabaseAdapterFactory()
+                .newBuilder()
+                .withConnector(MongoDBClient)
+                .withConfig(ImmutableAdjustableNonTransactionalDatabaseAdapterConfig.builder().build())
+                .build(storeWorker);
+        System.out.println("DatabaseAdapter Initialized");
+
+        RepoDescription repoDescTable = mongoDatabaseAdapter.fetchRepositoryDescription();
+        System.out.println("Repo version is " + repoDescTable.getRepoVersion());
+        AdapterTypes.RepoProps repoProps = toProto(repoDescTable);
+
+        /**String repoDescFilePath = targetDirectory + "/repoDesc"*/
+        String repoDescFilePath = "/Users/aditya.vemulapalli/Downloads/repoDesc";
+
+        byte[] arr = repoProps.toByteArray();
+        FileOutputStream fosDescTable = null;
+        try{
+            fosDescTable = new FileOutputStream(repoDescFilePath);
+            fosDescTable.write(arr);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if(fosDescTable != null)
+            {
+                try {
+                    fosDescTable.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        /** Deserialization Logic*/
+
+//        Path path = Paths.get("/Users/aditya.vemulapalli/Downloads/repoDesc");
+//         try {
+//         byte[] data = Files.readAllBytes(path);
+//         RepoDescription repoDesc = protoToRepoDescription(data);
+//             System.out.println("Repo version is " + repoDesc.getRepoVersion());
+//         } catch (IOException e) {
+//         throw new RuntimeException(e);
+//         }
+
+    }
+
+    @Test
     public void TestCommitLogTable()
     {
         MongoClientConfig mongoClientConfig = ImmutableMongoClientConfig.builder()
@@ -176,9 +327,12 @@ public class TestExportMongoDeserialization {
                 .build(storeWorker);
         System.out.println("DatabaseAdapter Initialized");
 
-        String commitLogTableFilePath = "/Users/aditya.vemulapalli/Downloads/commitLogFileTemp";
+        String commitLogTableFilePath1 = "/Users/aditya.vemulapalli/Downloads/commitLogFile1";
+        String commitLogTableFilePath2 = "/Users/aditya.vemulapalli/Downloads/commitLogFile2";
 
         Stream<CommitLogEntry> commitLogTable =  mongoDatabaseAdapter.scanAllCommitLogEntries();
+
+        List<CommitMeta> commitMetaList = new ArrayList<CommitMeta>();
 
         /**entries bounded cache*/
         Map<ContentId, ByteString> globalContents = new HashMap<>();
@@ -194,86 +348,137 @@ public class TestExportMongoDeserialization {
 
         Serializer<CommitMeta> metaSerializer = storeWorker.getMetadataSerializer();
 
-        CommitLogClassWrapped object = new CommitLogClassWrapped(new ArrayList<CommitLogClass>());
+        List<CommitLogClass1> commitLogList1 = new ArrayList<CommitLogClass1>();
+        List<CommitLogClass2> commitLogList2 = new ArrayList<CommitLogClass2>();
 
-        FileOutputStream fileOut = null;
+        FileOutputStream fileOut1 = null;
+        ObjectOutputStream out1 = null;
+        FileOutputStream fileOut2 = null;
         try{
-            fileOut = new FileOutputStream(commitLogTableFilePath);
+            fileOut1 = new FileOutputStream(commitLogTableFilePath1);
+            out1 = new ObjectOutputStream(fileOut1);
+            fileOut2 = new FileOutputStream(commitLogTableFilePath2);
 
             commitLogTable.map(x -> {
                 long createdTime = x.getCreatedTime();
-
-                String hash = x.getHash().asString();
-
                 long commitSeq = x.getCommitSeq();
+                String hash = x.getHash().asString();
 
                 String parent_1st = x.getParents().get(0).asString();
 
-                ByteString metaDataByteString = x.getMetadata();
-                CommitMeta commitMeta = metaSerializer.fromBytes(metaDataByteString);
-
-                //puts
-                List<KeyWithBytes> puts = x.getPuts();
-
-                List<Content> contents = new ArrayList<>();
-                List<ContentId> contentIds = new ArrayList<ContentId>();
-                List<Key> putsKeys = new ArrayList<Key>();
-                List<Key> deletes = new ArrayList<Key>();
-                deletes = x.getDeletes();
+                List<String> additionalParents = new ArrayList<String>();
 
                 List<Hash> hashAdditionalParents = x.getAdditionalParents();
-                List<String> additionalParents = new ArrayList<String>();
                 for (Hash hashAdditionalParent : hashAdditionalParents) {
                     additionalParents.add(hashAdditionalParent.asString());
                 }
 
-                for (KeyWithBytes put : puts) {
+                List<String> deletes = new ArrayList<String>();
+                List<Integer> noOfStringsInKeys = new ArrayList<Integer>();
 
-                    contentIds.add(put.getContentId());
+                List<Key> keyDeletes = x.getDeletes();
+                for (Key keyDelete : keyDeletes) {
+
+                    List<String> elements = keyDelete.getElements();
+
+                    noOfStringsInKeys.add(elements.size());
+
+                    deletes.addAll(elements);
+                }
+
+                List<KeyWithBytes> puts = x.getPuts();
+
+                ByteString metaDataByteString = x.getMetadata();
+
+                CommitMeta metaData = metaSerializer.fromBytes(metaDataByteString);
+                commitMetaList.add(metaData);
+
+                List <String> contentIds = new ArrayList<>();
+                List<Content> contents = new ArrayList<>();
+                List<String> putsKeyStrings = new ArrayList<>();
+                List<Integer> putsKeyNoOfStrings = new ArrayList<>();
+
+                for (KeyWithBytes put : puts) {
+                    ContentId contentId = put.getContentId();
+                    contentIds.add(contentId.getId());
 
                     ByteString value = put.getValue();
+
                     Content content = storeWorker.valueFromStore(value, () -> getGlobalContents.apply(put));
+
                     contents.add(content);
 
                     Key key = put.getKey();
-                    putsKeys.add(put.getKey());
+                    List<String> elements1 = key.getElements();
+                    putsKeyNoOfStrings.add(elements1.size());
+                    putsKeyStrings.addAll(elements1);
                 }
 
-                return new CommitLogClass(createdTime, hash, commitSeq, parent_1st, commitMeta, contentIds, contents,
-                        putsKeys, deletes, additionalParents);
-            }).forEachOrdered(y -> {object.commitLog.add(y) ; });
+                commitLogList2.add(new CommitLogClass2(contents, metaData));
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            byte[] array;
+                /** Must Change This */
+                return new CommitLogClass1(createdTime, commitSeq, hash, parent_1st, additionalParents, deletes, noOfStringsInKeys,
+                        contentIds, putsKeyStrings, putsKeyNoOfStrings);
+            }).forEachOrdered(commitLogList1::add);
 
-            try{
-                array = objectMapper.writeValueAsBytes(object);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+            for (CommitLogClass2 commitLogClass2 : commitLogList2) {
+                //First store the number of contents in each commit log entry
+
+                byte[] arr ;
+                ObjectMapper objectMapper = new ObjectMapper();
+
+                try{
+                    arr = objectMapper.writeValueAsBytes(commitLogClass2);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+
+                ByteBuffer bb = ByteBuffer.allocate(4);
+                bb.putInt(arr.length);
+                byte[] bytes = bb.array();
+                try{
+                    fileOut2.write(bytes);
+                    fileOut2.write(arr);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
-
-            try{
-                fileOut.write(array);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            fileOut.close();
+            out1.writeObject(commitLogList1);
+            out1.close();
+            fileOut1.close();
+            fileOut2.close();
             commitLogTable.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        Path path = Paths.get("/Users/aditya.vemulapalli/Downloads/commitLogFileTemp" );
-
-        try{
+        Path path = Paths.get("/Users/aditya.vemulapalli/Downloads/commitLogFile2" );
+        try {
             byte[] data = Files.readAllBytes(path);
-            ObjectMapper objectMapper1 = new ObjectMapper();
-            CommitLogClassWrapped commitLogClassWrapped;
-            commitLogClassWrapped = objectMapper1.readValue(data, CommitLogClassWrapped.class);
+            int noOfBytes = data.length;
+            List<CommitLogClass2> deserializedRefLogTable = new ArrayList<CommitLogClass2>();
+            int from = 0 ;
+            int size;
+            byte[] sizeArr;
+            byte[] obj;
+            while(noOfBytes != 0)
+            {
+                sizeArr = Arrays.copyOfRange(data, from, from + 4);
+                size = new BigInteger(sizeArr).intValue();
+                from += 4;
+                noOfBytes -= 4;
+                obj = Arrays.copyOfRange(data, from , from + size );
+                from += size;
+                noOfBytes -= size;
+                ObjectMapper objectMapper = new ObjectMapper();
+                CommitLogClass2 commitLogClass2 = objectMapper.readValue(obj, CommitLogClass2.class);
+
+                System.out.println(commitLogClass2.commitMeta);
+
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
 
     }
 
