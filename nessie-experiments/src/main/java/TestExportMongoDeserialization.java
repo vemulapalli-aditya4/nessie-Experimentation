@@ -461,6 +461,7 @@ public class TestExportMongoDeserialization {
             int size;
             byte[] sizeArr;
             byte[] obj;
+            int i = 0;
             while(noOfBytes != 0)
             {
                 sizeArr = Arrays.copyOfRange(data, from, from + 4);
@@ -474,7 +475,8 @@ public class TestExportMongoDeserialization {
                 CommitLogClass2 commitLogClass2 = objectMapper.readValue(obj, CommitLogClass2.class);
 
                 System.out.println(commitLogClass2.commitMeta);
-
+                System.out.println(commitMetaList.get(i));
+                i++;
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
