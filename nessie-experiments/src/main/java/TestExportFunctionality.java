@@ -255,14 +255,14 @@ public class TestExportFunctionality {
         }
         /** Deserialization Logic*/
 
-        Path path = Paths.get("/Users/aditya.vemulapalli/Downloads/repoDesc");
-         try {
-         byte[] data = Files.readAllBytes(path);
-         RepoDescription repoDesc = protoToRepoDescription(data);
-             System.out.println("Repo version is " + repoDesc.getRepoVersion());
-         } catch (IOException e) {
-         throw new RuntimeException(e);
-         }
+//        Path path = Paths.get("/Users/aditya.vemulapalli/Downloads/repoDesc");
+//         try {
+//         byte[] data = Files.readAllBytes(path);
+//         RepoDescription repoDesc = protoToRepoDescription(data);
+//             System.out.println("Repo version is " + repoDesc.getRepoVersion());
+//         } catch (IOException e) {
+//         throw new RuntimeException(e);
+//         }
 
     }
 
