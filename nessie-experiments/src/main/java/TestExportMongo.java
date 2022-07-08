@@ -1,11 +1,5 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonStreamParser;
-import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.ByteString;
 import org.junit.Test;
 import org.projectnessie.model.*;
@@ -19,23 +13,20 @@ import org.projectnessie.versioned.persist.mongodb.MongoDatabaseClient;
 import org.projectnessie.versioned.persist.nontx.ImmutableAdjustableNonTransactionalDatabaseAdapterConfig;
 import org.projectnessie.versioned.persist.serialize.AdapterTypes;
 
-import javax.annotation.Nullable;
 import java.io.*;
-import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.projectnessie.versioned.persist.adapter.serialize.ProtoSerialization.*;
 
 
 
-public class TestExportFunctionality {
+public class TestExportMongo {
 
     @Test
     public void TestRefLogTable() throws RefLogNotFoundException {
@@ -74,7 +65,7 @@ public class TestExportFunctionality {
             refLogTable.map(x-> {
                 AdapterTypes.RefLogEntry refLogEntry = toProtoFromRefLog(x);
                 return refLogEntry.toByteArray();
-            }).forEach(y ->{
+            }).forEachOrdered(y ->{
 
                 int len = y.length;
                 lCalc[0] += len;
@@ -385,7 +376,7 @@ public class TestExportFunctionality {
                 /** Must Change This */
                 return new CommitLogClass1(createdTime, commitSeq, hash, parent_1st, additionalParents, deletes, noOfStringsInKeys,
                         contentIds, putsKeyStrings, putsKeyNoOfStrings);
-            }).forEach(commitLogList1::add);
+            }).forEachOrdered(commitLogList1::add);
 
             for (CommitLogClass2 commitLogClass2 : commitLogList2) {
                 //First store the number of contents in each commit log entry
@@ -507,7 +498,7 @@ public class TestExportFunctionality {
         } else if (Objects.equals(op, "COMMIT")) {
             operation = AdapterTypes.RefLogEntry.Operation.COMMIT;
         } else if ( Objects.equals(op, "DELETE_REFERENCE") ) {
-            operation = AdapterTypes.RefLogEntry.Operation.COMMIT;
+            operation = AdapterTypes.RefLogEntry.Operation.DELETE_REFERENCE;
         } else if (Objects.equals(op, "ASSIGN_REFERENCE") ) {
             operation = AdapterTypes.RefLogEntry.Operation.ASSIGN_REFERENCE;
         } else if (Objects.equals(op, "MERGE")) {

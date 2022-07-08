@@ -30,8 +30,8 @@ public class TestExportDynamo {
                 .builder()
                 .endpointURI(endpointURI)
                 .region(region)
-                .credentialsProvider(credentialsProvider)
-                .dynamoDbClient(dynamoDbClient)
+//                .credentialsProvider(credentialsProvider)
+//                .dynamoDbClient(dynamoDbClient)
                 .build();
 
         StoreWorker<Content, CommitMeta, Content.Type> storeWorker = new TableCommitMetaStoreWorker();
