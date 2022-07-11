@@ -51,7 +51,7 @@ public class TestExportPostgres {
             public Connection borrowConnection() throws SQLException {
 
                 try{
-                    if(postgresConnection.get() == null && postgresConnection.get().isClosed())
+                    if(postgresConnection.get() == null || postgresConnection.get().isClosed())
                     {
                         postgresConnection.compareAndSet(null, getConnection());
                     }
@@ -61,9 +61,7 @@ public class TestExportPostgres {
                 }
                 catch(SQLException e)
                 {
-                    System.out.println(" SQL Exception and NULL connection is returned " + e.getMessage());
-
-                    return null;
+                    throw new RuntimeException(e);
                 }
 
             }
@@ -84,7 +82,7 @@ public class TestExportPostgres {
 
         try {
             Stream<ReferenceInfo<ByteString>> refs = postgresDBAdapter.namedRefs(GetNamedRefsParams.DEFAULT);
-            refs.map(y -> y.getNamedRef().getName()).forEach(System.out::println);
+            // refs.map(y -> y.getNamedRef().getName()).forEach(System.out::println);
         } catch (ReferenceNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -101,7 +99,7 @@ public class TestExportPostgres {
     public Connection getConnection() throws SQLException{
         Connection conn = null;
 
-        String jdbcURL = "jdbc:postgresql://localhost:55000/nessie";
+        String jdbcURL = "jdbc:postgresql://localhost:55001/nessie";
         conn = DriverManager.getConnection(jdbcURL, userName, password);
 
         return conn;
