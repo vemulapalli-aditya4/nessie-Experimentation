@@ -22,7 +22,7 @@ public class TestExportDynamo {
     public void getTablesInDynamoRepo()
     {
         //Must initialize AWSCredentialsProvider and DynamoDbClient
-        String  endpointURI = "http://localhost:8000";
+        String endpointURI = "http://localhost:8000";
         String region = "us-west-2";
         AwsCredentialsProvider credentialsProvider ;
         DynamoDbClient dynamoDbClient ;

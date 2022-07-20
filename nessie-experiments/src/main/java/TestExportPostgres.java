@@ -27,9 +27,7 @@ public class TestExportPostgres {
 
     private String dbms = "postgresql";
 
-    private String portNumber = "55001";
-
-    public final AtomicReference<Connection> postgresConnection = new AtomicReference<>();
+    private String portNumber = "55002";
 
     @Test
     public void getTablesInPostgresRepo()
@@ -49,21 +47,10 @@ public class TestExportPostgres {
         connector = new TxConnectionProvider<TxConnectionConfig>() {
             @Override
             public Connection borrowConnection() throws SQLException {
-
-                try{
-                    if(postgresConnection.get() == null || postgresConnection.get().isClosed())
-                    {
-                        postgresConnection.compareAndSet(null, getConnection());
-                    }
-
-                    postgresConnection.get().setAutoCommit(false);
-                    return  postgresConnection.get();
-                }
-                catch(SQLException e)
-                {
-                    throw new RuntimeException(e);
-                }
-
+                Connection conn;
+                conn = DriverManager.getConnection("jdbc:postgresql://localhost:55002/nessie", "postgres", "postgrespw");
+                conn.setAutoCommit(false);
+                return conn;
             }
 
             @Override
@@ -71,8 +58,13 @@ public class TestExportPostgres {
 
             }
         };
-
         connector.configure(txConnectionConfig);
+
+        try {
+            connector.initialize();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
         postgresDBAdapter = new PostgresDatabaseAdapterFactory()
                 .newBuilder()
@@ -82,27 +74,10 @@ public class TestExportPostgres {
 
         try {
             Stream<ReferenceInfo<ByteString>> refs = postgresDBAdapter.namedRefs(GetNamedRefsParams.DEFAULT);
-            // refs.map(y -> y.getNamedRef().getName()).forEach(System.out::println);
+            refs.map(y -> y.getNamedRef().getName()).forEach(System.out::println);
         } catch (ReferenceNotFoundException e) {
             throw new RuntimeException(e);
         }
-
-
-        try {
-            postgresConnection.get().close();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-    public Connection getConnection() throws SQLException{
-        Connection conn = null;
-
-        String jdbcURL = "jdbc:postgresql://localhost:55001/nessie";
-        conn = DriverManager.getConnection(jdbcURL, userName, password);
-
-        return conn;
     }
 
 }

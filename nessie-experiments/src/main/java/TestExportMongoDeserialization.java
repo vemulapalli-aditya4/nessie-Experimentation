@@ -483,7 +483,6 @@ public class TestExportMongoDeserialization {
         }
 
     }
-
     public AdapterTypes.RefLogEntry toProtoFromRefLog(RefLog refLog)
     {
         /** Reference type can be 'Branch' or 'Tag'. */
